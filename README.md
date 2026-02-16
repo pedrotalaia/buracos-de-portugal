@@ -12,15 +12,50 @@ Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Po
 
 ## Requisitos
 
+- Docker e Docker Compose
+- Supabase CLI — [instalar aqui](https://supabase.com/docs/guides/cli/getting-started)
+
+Ou, sem Docker:
+
 - Node.js 18+
 - npm 9+
-- Supabase CLI (opcional, para funções/migrations locais)
+- Supabase CLI
 
-## Setup local
+## Setup local (Docker — recomendado)
 
 ```sh
-git clone <URL_DO_REPOSITORIO>
+git clone https://github.com/wods-agency/portugal-road-watch.git
 cd portugal-road-watch
+cp .env.example .env
+
+# Inicia o Supabase local (base de dados, auth, storage)
+supabase start
+
+# Copia o API URL e anon key do output acima para o ficheiro .env
+
+# Inicia a aplicação
+docker compose up
+```
+
+App local: http://localhost:8080
+
+Para parar:
+
+```sh
+docker compose down
+supabase stop
+```
+
+## Setup local (sem Docker)
+
+```sh
+git clone https://github.com/wods-agency/portugal-road-watch.git
+cd portugal-road-watch
+cp .env.example .env
+
+supabase start
+# Copia o API URL e anon key para o .env
+
 npm install
 npm run dev
 ```
@@ -39,18 +74,13 @@ npm run lint
 
 ## Configuração de ambiente
 
-Criar um ficheiro .env com as variáveis necessárias do Supabase:
+Copiar `.env.example` para `.env` e preencher com os valores do `supabase start`:
 
 ```sh
-VITE_SUPABASE_URL=<url>
-VITE_SUPABASE_ANON_KEY=<anon_key>
+cp .env.example .env
 ```
 
-Opcional (geocoding):
-
-```sh
-VITE_GEOCODING_PROVIDER=nominatim
-```
+Ver `.env.example` para a lista completa de variáveis (obrigatórias e opcionais).
 
 ## Funcionalidades principais
 
