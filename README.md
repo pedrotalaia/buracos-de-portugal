@@ -106,3 +106,19 @@ npm run build
 ```
 
 Publicar os ficheiros de dist no teu provider de hosting (Vercel, Netlify, Cloudflare Pages, etc.).
+
+### Vercel sem subdomínio API
+
+Se não tens `api.<dominio>`, podes servir a API no mesmo domínio da app usando Vercel Functions:
+
+- As rotas backend estão expostas via [api/[...all].js](api/[...all].js) e respondem em `/api/*`.
+- Não é necessário `VITE_API_BASE_URL` para este cenário (usa o mesmo domínio).
+- Define as variáveis de ambiente no projeto Vercel (Production/Preview):
+	- `DATABASE_URL`
+	- `NEON_DATABASE_URL`
+	- `VITE_AUTH_PROVIDER`
+	- `VITE_NEON_AUTH_URL`
+	- `RESEND_API_KEY`
+	- `RESEND_FROM_EMAIL`
+
+Nota: uploads em disco em runtime serverless são temporários; para produção recomenda-se storage persistente (S3, Supabase Storage, etc.).
