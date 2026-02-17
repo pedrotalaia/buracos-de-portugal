@@ -52,6 +52,10 @@ function getErrorFromResult(result: unknown): unknown {
   return (result as { error?: unknown }).error ?? null;
 }
 
+function getSignUpCallbackUrl(): string {
+  return `${window.location.origin}/auth`;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -102,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       name: email.split('@')[0],
+      callbackURL: getSignUpCallbackUrl(),
     });
 
     const error = getErrorFromResult(result);
@@ -115,8 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             appUrl: window.location.origin,
           }),
         });
-      } catch {
-        // noop
+      } catch (signupEmailError) {
+        console.warn('Falha ao enviar email transacional de registo:', signupEmailError);
       }
 
       const sessionResult = await neonAuthClient.getSession();

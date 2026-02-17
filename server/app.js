@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initSchema, pool } from './db.js';
+import { isResendConfigured, sendSignupEmail } from './resend.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -348,6 +349,20 @@ export function createApp() {
 
   app.post('/api/auth/signup-email', async (req, res) => {
     try {
+      const toEmail = String(req.body?.email || '').trim();
+      const appUrl = String(req.body?.appUrl || '').trim();
+
+      if (!toEmail) {
+        res.status(400).json({ message: 'Email é obrigatório.' });
+        return;
+      }
+
+      if (!isResendConfigured()) {
+        res.status(503).json({ message: 'Email transacional indisponível.' });
+        return;
+      }
+
+      await sendSignupEmail({ toEmail, appUrl });
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: 'Erro ao processar signup email.', error: String(error) });

@@ -28,11 +28,11 @@ export async function sendSignupEmail({ toEmail, appUrl }) {
     body: JSON.stringify({
       from: fromEmail,
       to: [toEmail],
-      subject: 'Bem-vindo ao Portugal Road Watch',
+      subject: 'Bem-vindo ao Buracos de Portugal!',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
           <h2>Conta criada com sucesso</h2>
-          <p>Obrigado por te registares no Portugal Road Watch.</p>
+          <p>Obrigado por te registares no Buracos de Portugal.</p>
           <p>Podes entrar e gerir os teus reportes aqui:</p>
           <p><a href="${safeAppUrl}/auth" target="_blank" rel="noreferrer">${safeAppUrl}/auth</a></p>
         </div>

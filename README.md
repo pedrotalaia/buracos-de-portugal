@@ -1,4 +1,4 @@
-# Portugal Road Watch
+# Buracos de Portugal
 
 Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Portugal.
 
@@ -56,7 +56,7 @@ NEON_DATABASE_URL=<neon_postgres_url>
 VITE_AUTH_PROVIDER=neon
 VITE_NEON_AUTH_URL=<neon_auth_url>
 RESEND_API_KEY=<resend_api_key>
-RESEND_FROM_EMAIL=Portugal Road Watch <onboarding@teu-dominio.pt>
+RESEND_FROM_EMAIL=Buracos de Portugal <onboarding@teu-dominio.pt>
 VITE_API_BASE_URL=<url_publica_da_tua_api_express>
 VITE_UPLOADS_BASE_URL=<url_publica_da_tua_api_express>
 ```
