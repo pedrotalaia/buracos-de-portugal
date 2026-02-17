@@ -57,12 +57,16 @@ VITE_AUTH_PROVIDER=neon
 VITE_NEON_AUTH_URL=<neon_auth_url>
 RESEND_API_KEY=<resend_api_key>
 RESEND_FROM_EMAIL=Portugal Road Watch <onboarding@teu-dominio.pt>
+VITE_API_BASE_URL=<url_publica_da_tua_api_express>
+VITE_UPLOADS_BASE_URL=<url_publica_da_tua_api_express>
 ```
 
 Notas:
 
 - Sem `VITE_NEON_AUTH_URL`, o login/registo Neon Auth não funciona.
 - Com `RESEND_API_KEY` + `RESEND_FROM_EMAIL`, o backend envia um email transacional após registo (`POST /api/auth/signup-email`).
+- Em produção, se frontend e backend estiverem em domínios diferentes, define `VITE_API_BASE_URL` (ex.: `https://api.buracosdeportugal.pt`) para evitar 404 em `/api/*`.
+- Se as imagens estiverem a ser servidas pelo backend (`/uploads/*`), define `VITE_UPLOADS_BASE_URL` (normalmente igual ao `VITE_API_BASE_URL`).
 
 Opcional (geocoding):
 
