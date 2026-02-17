@@ -8,9 +8,9 @@ import { ArrowLeft, MapPin, ThumbsUp, AlertTriangle, CheckCircle, Clock, Trendin
 import { SEVERITY_LABELS, STATUS_LABELS, Pothole } from '@/types/pothole';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PotholeDetailSheet from '@/components/Map/PotholeDetailSheet';
-import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/api';
 
 const SEVERITY_COLORS = {
   low: 'hsl(45, 93%, 47%)',
@@ -82,19 +82,16 @@ export default function Stats() {
   const handleReopen = async (pothole: Pothole) => {
     setActionLoading(pothole.id);
     try {
-      const { error } = await supabase
-        .from('potholes')
-        .update({
-          status: 'reported' as any,
-          repaired_at: null,
-          reopen_count: (pothole.reopen_count ?? 0) + 1,
-        })
-        .eq('id', pothole.id);
-      if (error) throw error;
+      await apiRequest(`/api/potholes/${pothole.id}/reopen`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reopen_count: (pothole.reopen_count ?? 0) + 1 }),
+      });
       queryClient.invalidateQueries({ queryKey: ['potholes'] });
       toast({ title: 'Buraco reaberto', description: 'O estado foi alterado para "Reportado".' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao reabrir buraco.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -103,15 +100,15 @@ export default function Stats() {
   const handleDelete = async (pothole: Pothole) => {
     setActionLoading(pothole.id);
     try {
-      await supabase.from('votes').delete().eq('pothole_id', pothole.id);
-      await supabase.from('comments').delete().eq('pothole_id', pothole.id);
-      const { error } = await supabase.from('potholes').delete().eq('id', pothole.id);
-      if (error) throw error;
+      await apiRequest(`/api/potholes/${pothole.id}`, {
+        method: 'DELETE',
+      });
       queryClient.invalidateQueries({ queryKey: ['potholes'] });
       setSelectedPothole(null);
       toast({ title: 'Buraco eliminado', description: 'O reporte foi removido.' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao eliminar buraco.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }

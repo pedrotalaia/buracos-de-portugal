@@ -30,11 +30,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { apiRequest } from '@/lib/api';
 
 const severityColors: Record<string, string> = {
   low: 'hsl(var(--severity-low))',
@@ -79,16 +79,11 @@ export default function PotholeDetailSheet({
     }
     
     const fetchReporter = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', pothole.user_id)
-        .single();
-      
-      if (error || !data) {
+      try {
+        const profile = await apiRequest<{ id: string; display_name: string | null }>(`/api/profiles/${pothole.user_id}`);
+        setReporterName(profile.display_name || 'Usuário');
+      } catch {
         setReporterName('Usuário');
-      } else {
-        setReporterName(data.display_name || 'Usuário');
       }
     };
     

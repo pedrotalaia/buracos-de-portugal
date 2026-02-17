@@ -1,7 +1,0 @@
-project_id = "rxeaxrqohvfezhfgbzqd"
-
-[functions.archive-old-potholes]
-verify_jwt = false
-
-[functions.backfill-pothole-addresses]
-verify_jwt = false

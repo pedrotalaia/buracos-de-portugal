@@ -51,7 +51,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="relative w-screen overflow-hidden" style={{ height: 'calc(100vh - 5rem)' }}>
       <PotholeMap
         potholes={filteredPotholes}
         onMapClick={handleMapClick}
@@ -117,7 +117,7 @@ const Index = () => {
       </div>
 
       {/* Stats bar */}
-      <div className="absolute bottom-6 left-4 z-10 bg-background/95 backdrop-blur rounded-lg shadow-lg px-4 py-2 flex gap-4 text-sm">
+      <div className="absolute bottom-6 left-4 z-50 pointer-events-auto bg-background/95 backdrop-blur rounded-lg shadow-lg px-4 py-2 flex gap-4 text-sm">
         {isLoading ? (
           <span className="text-muted-foreground">A carregar...</span>
         ) : (

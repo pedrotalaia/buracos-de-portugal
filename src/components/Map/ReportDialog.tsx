@@ -12,12 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Severity, SEVERITY_LABELS } from '@/types/pothole';
 import { MapPin, Camera, AlertTriangle, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/lib/imageUtils';
 import { reverseGeocodeWithFallback } from '@/lib/geocoding';
+import { apiRequest } from '@/lib/api';
 
 interface ReportDialogProps {
   open: boolean;
@@ -54,68 +54,66 @@ export default function ReportDialog({ open, onClose, selectedLocation }: Report
 
     setSubmitting(true);
     try {
-      let photo_url: string | null = null;
       const typedAddress = address.trim();
 
-      let resolvedAddress: string | null = typedAddress || null;
-      let normalizedAddress: string | null = typedAddress || null;
-      let parish: string | null = null;
-      let municipality: string | null = null;
-      let district: string | null = null;
-      let postalCode: string | null = null;
-      let geocodeStatus: 'pending' | 'resolved' | 'manual' = typedAddress ? 'manual' : 'pending';
-
-      if (!typedAddress) {
-        const geocoded = await reverseGeocodeWithFallback(selectedLocation.lat, selectedLocation.lng);
-        if (geocoded) {
-          resolvedAddress = geocoded.address;
-          normalizedAddress = geocoded.normalized_address;
-          parish = geocoded.parish;
-          municipality = geocoded.municipality;
-          district = geocoded.district;
-          postalCode = geocoded.postal_code;
-          geocodeStatus = 'resolved';
-        }
+      const geocoded = await reverseGeocodeWithFallback(selectedLocation.lat, selectedLocation.lng);
+      if (!geocoded) {
+        toast({
+          title: 'Localização inválida',
+          description: 'Só é possível reportar buracos em Portugal (continente e ilhas).',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      if (!geocoded.municipality) {
+        toast({
+          title: 'Concelho não encontrado',
+          description: 'Não foi possível determinar o concelho desta localização. Tente outro ponto no mapa.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const resolvedAddress = typedAddress || geocoded.address;
+      const normalizedAddress = geocoded.normalized_address;
+      const parish = geocoded.parish;
+      const municipality = geocoded.municipality;
+      const district = geocoded.district;
+      const postalCode = geocoded.postal_code;
+      const geocodeStatus: 'resolved' = 'resolved';
+
+      const form = new FormData();
+      form.append('lat', String(selectedLocation.lat));
+      form.append('lng', String(selectedLocation.lng));
+      form.append('severity', severity);
+      form.append('address', resolvedAddress || '');
+      form.append('normalized_address', normalizedAddress || '');
+      form.append('parish', parish || '');
+      form.append('municipality', municipality || '');
+      form.append('district', district || '');
+      form.append('postal_code', postalCode || '');
+      form.append('geocode_status', geocodeStatus);
+      form.append('description', description || '');
+      form.append('user_id', user?.id ?? '');
 
       if (photoFile) {
         const compressed = await compressImage(photoFile);
-        const fileName = `${crypto.randomUUID()}.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from('pothole-photos')
-          .upload(fileName, compressed);
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('pothole-photos')
-          .getPublicUrl(fileName);
-        photo_url = urlData.publicUrl;
+        form.append('photo', compressed, `${crypto.randomUUID()}.jpg`);
       }
 
-      const { error } = await supabase.from('potholes').insert({
-        lat: selectedLocation.lat,
-        lng: selectedLocation.lng,
-        severity,
-        address: resolvedAddress,
-        normalized_address: normalizedAddress,
-        parish,
-        municipality,
-        district,
-        postal_code: postalCode,
-        geocode_status: geocodeStatus,
-        description: description || null,
-        photo_url,
-        user_id: user?.id ?? null,
+      await apiRequest('/api/potholes', {
+        method: 'POST',
+        body: form,
       });
-
-      if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ['potholes'] });
       toast({ title: 'Buraco reportado!', description: 'Obrigado por contribuir.' });
       resetForm();
       onClose();
-    } catch (err: any) {
-      toast({ title: 'Erro ao reportar', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao reportar buraco.';
+      toast({ title: 'Erro ao reportar', description: message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }

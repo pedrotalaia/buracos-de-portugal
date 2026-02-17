@@ -32,6 +32,8 @@ interface NominatimAddress {
   state_district?: string;
   state?: string;
   postcode?: string;
+  country?: string;
+  country_code?: string;
 }
 
 interface NominatimReverseResponse {
@@ -46,8 +48,23 @@ export interface NormalizedAddress {
   municipality: string | null;
   district: string | null;
   postal_code: string | null;
+  country: string | null;
+  country_code: string | null;
   provider: string;
 }
+
+interface TerritoryBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+const PORTUGAL_TERRITORY_BOUNDS: TerritoryBounds[] = [
+  { minLat: 36.8, maxLat: 42.2, minLng: -9.7, maxLng: -6.0 },
+  { minLat: 32.2, maxLat: 33.3, minLng: -17.6, maxLng: -16.0 },
+  { minLat: 36.5, maxLat: 39.9, minLng: -31.9, maxLng: -24.0 },
+];
 
 type ProviderName = 'nominatim';
 
@@ -91,6 +108,10 @@ export async function searchLocations(query: string, signal?: AbortSignal): Prom
 }
 
 export async function reverseGeocodeWithFallback(lat: number, lng: number): Promise<NormalizedAddress | null> {
+  if (!isWithinPortugalTerritory(lat, lng)) {
+    return null;
+  }
+
   const providers = getProviderOrder();
 
   for (const provider of providers) {
@@ -120,6 +141,7 @@ async function reverseGeocodeNominatim(lat: number, lng: number): Promise<Normal
 
   const data = (await res.json()) as NominatimReverseResponse;
   if (!data?.display_name) return null;
+  if (!isPortugalAddress(data.address)) return null;
 
   const parsed = normalizeAddressFromNominatim(data);
   return {
@@ -136,6 +158,8 @@ function normalizeAddressFromNominatim(data: NominatimReverseResponse): Omit<Nor
   const municipality = pickFirst(address.city, address.town, address.village, address.municipality, address.county);
   const district = pickFirst(address.state_district, address.state, address.county);
   const postalCode = pickFirst(address.postcode);
+  const country = pickFirst(address.country);
+  const countryCode = normalizeCountryCode(address.country_code);
 
   const line1 = [road, houseNumber].filter(Boolean).join(', ');
   const line2 = [postalCode, municipality].filter(Boolean).join(' ');
@@ -148,7 +172,30 @@ function normalizeAddressFromNominatim(data: NominatimReverseResponse): Omit<Nor
     municipality: municipality || null,
     district: district || null,
     postal_code: postalCode || null,
+    country: country || null,
+    country_code: countryCode,
   };
+}
+
+function isPortugalAddress(address: NominatimAddress | undefined): boolean {
+  const countryCode = normalizeCountryCode(address?.country_code);
+  if (countryCode === 'pt') return true;
+
+  const country = (address?.country || '').trim().toLowerCase();
+  return country === 'portugal';
+}
+
+function normalizeCountryCode(value: string | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+export function isWithinPortugalTerritory(lat: number, lng: number): boolean {
+  return PORTUGAL_TERRITORY_BOUNDS.some(
+    (bounds) =>
+      lat >= bounds.minLat && lat <= bounds.maxLat && lng >= bounds.minLng && lng <= bounds.maxLng,
+  );
 }
 
 function pickFirst(...values: Array<string | undefined>): string | null {

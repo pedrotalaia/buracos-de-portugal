@@ -7,14 +7,15 @@ Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Po
 - Vite
 - React + TypeScript
 - Tailwind CSS + shadcn/ui
-- Supabase (Database, Auth, Storage, Edge Functions)
+- Neon Postgres
+- Neon Auth
+- API Node/Express (camada backend)
 - React Leaflet
 
 ## Requisitos
 
 - Node.js 18+
 - npm 9+
-- Supabase CLI (opcional, para funções/migrations locais)
 
 ## Setup local
 
@@ -31,6 +32,8 @@ App local: http://localhost:8080
 
 ```sh
 npm run dev
+npm run dev:web
+npm run dev:api
 npm run build
 npm run preview
 npm run test
@@ -39,12 +42,27 @@ npm run lint
 
 ## Configuração de ambiente
 
-Criar um ficheiro .env com as variáveis necessárias do Supabase:
+Cria `.env` a partir de `.env.example` e preenche as variáveis:
 
 ```sh
-VITE_SUPABASE_URL=<url>
-VITE_SUPABASE_ANON_KEY=<anon_key>
+cp .env.example .env
 ```
+
+Configuração Neon:
+
+```sh
+DATABASE_URL=<neon_postgres_url>
+NEON_DATABASE_URL=<neon_postgres_url>
+VITE_AUTH_PROVIDER=neon
+VITE_NEON_AUTH_URL=<neon_auth_url>
+RESEND_API_KEY=<resend_api_key>
+RESEND_FROM_EMAIL=Portugal Road Watch <onboarding@teu-dominio.pt>
+```
+
+Notas:
+
+- Sem `VITE_NEON_AUTH_URL`, o login/registo Neon Auth não funciona.
+- Com `RESEND_API_KEY` + `RESEND_FROM_EMAIL`, o backend envia um email transacional após registo (`POST /api/auth/signup-email`).
 
 Opcional (geocoding):
 
@@ -60,26 +78,20 @@ VITE_GEOCODING_PROVIDER=nominatim
 - Estatísticas de buracos e votos
 - Preenchimento automático de morada por coordenadas quando não é indicada manualmente
 
-## Supabase
+## Backend Neon API
 
-### Migration de geocoding
+A API local corre em `http://localhost:8787` e expõe:
 
-Foi adicionada uma migration para campos de morada normalizada e estado de geocoding:
-
-- supabase/migrations/20260215210000_add_geocoding_normalized_address_fields.sql
-
-### Edge Functions
-
-- archive-old-potholes
-- backfill-pothole-addresses
-
-Invocar manualmente o backfill:
-
-```sh
-supabase functions invoke backfill-pothole-addresses --no-verify-jwt --project-ref <project-ref> --query "limit=100"
-```
-
-Recomendação: executar 1 vez por dia (fim do dia) via scheduler.
+- `GET /api/potholes`
+- `POST /api/potholes` (com upload opcional de foto)
+- `PATCH /api/potholes/:id/reopen`
+- `DELETE /api/potholes/:id`
+- `GET /api/comments?potholeId=...`
+- `POST /api/comments`
+- `GET /api/votes/status`
+- `POST /api/votes/toggle`
+- `GET /api/profiles/:id`
+- `PUT /api/profiles/:id`
 
 ## Deploy
 
