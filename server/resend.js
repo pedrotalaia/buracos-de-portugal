@@ -18,6 +18,7 @@ export async function sendSignupEmail({ toEmail, appUrl }) {
   }
 
   const safeAppUrl = typeof appUrl === 'string' && appUrl.trim() ? appUrl.trim() : 'http://localhost:8080';
+  const verifyUrl = `${safeAppUrl}/auth/verify?email=${encodeURIComponent(toEmail)}`;
 
   const response = await fetch(RESEND_API_URL, {
     method: 'POST',
@@ -33,8 +34,8 @@ export async function sendSignupEmail({ toEmail, appUrl }) {
         <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
           <h2>Conta criada com sucesso</h2>
           <p>Obrigado por te registares no Buracos de Portugal.</p>
-          <p>Podes entrar e gerir os teus reportes aqui:</p>
-          <p><a href="${safeAppUrl}/auth" target="_blank" rel="noreferrer">${safeAppUrl}/auth</a></p>
+          <p>Para confirmares o email, abre esta página e introduz o código de 6 dígitos recebido no email da Neon Auth:</p>
+          <p><a href="${verifyUrl}" target="_blank" rel="noreferrer">${verifyUrl}</a></p>
         </div>
       `,
     }),

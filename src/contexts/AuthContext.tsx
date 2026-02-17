@@ -18,6 +18,8 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: unknown }>;
   signIn: (email: string, password: string) => Promise<{ error: unknown }>;
+  verifyEmailOtp: (email: string, otp: string) => Promise<{ error: unknown }>;
+  resendVerification: (email: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<void>;
 }
 
@@ -53,7 +55,7 @@ function getErrorFromResult(result: unknown): unknown {
 }
 
 function getSignUpCallbackUrl(): string {
-  return `${window.location.origin}/auth`;
+  return `${window.location.origin}/auth/verify`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -151,6 +153,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const verifyEmailOtp = async (email: string, otp: string) => {
+    if (!neonAuthClient) {
+      return { error: { message: 'VITE_NEON_AUTH_URL não configurada.' } };
+    }
+
+    const result = await neonAuthClient.emailOtp.verifyEmail({ email, otp });
+    const error = getErrorFromResult(result);
+
+    if (!error) {
+      const sessionResult = await neonAuthClient.getSession();
+      const nextSession = mapSessionFromResult(sessionResult);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+    }
+
+    return { error };
+  };
+
+  const resendVerification = async (email: string) => {
+    if (!neonAuthClient) {
+      return { error: { message: 'VITE_NEON_AUTH_URL não configurada.' } };
+    }
+
+    const result = await neonAuthClient.sendVerificationEmail({
+      email,
+      callbackURL: getSignUpCallbackUrl(),
+    });
+
+    const error = getErrorFromResult(result);
+    return { error };
+  };
+
   const signOut = async () => {
     if (neonAuthClient) {
       await neonAuthClient.signOut();
@@ -160,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, verifyEmailOtp, resendVerification, signOut }}>
       {children}
     </AuthContext.Provider>
   );
