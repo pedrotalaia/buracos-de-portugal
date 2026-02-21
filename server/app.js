@@ -178,6 +178,56 @@ export function createApp() {
     }
   });
 
+  app.patch('/api/potholes/:id/repairing', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const { rows } = await pool.query(
+        `
+        update public.potholes
+        set status = 'repairing'
+        where id = $1
+        returning *
+      `,
+        [id],
+      );
+
+      if (!rows[0]) {
+        res.status(404).json({ message: 'Buraco não encontrado.' });
+        return;
+      }
+
+      res.json(rows[0]);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao marcar buraco como em reparação.', error: String(error) });
+    }
+  });
+
+  app.patch('/api/potholes/:id/resolve', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const { rows } = await pool.query(
+        `
+        update public.potholes
+        set status = 'repaired', repaired_at = now()
+        where id = $1
+        returning *
+      `,
+        [id],
+      );
+
+      if (!rows[0]) {
+        res.status(404).json({ message: 'Buraco não encontrado.' });
+        return;
+      }
+
+      res.json(rows[0]);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao marcar buraco como reparado.', error: String(error) });
+    }
+  });
+
   app.delete('/api/potholes/:id', async (req, res) => {
     const client = await pool.connect();
     try {

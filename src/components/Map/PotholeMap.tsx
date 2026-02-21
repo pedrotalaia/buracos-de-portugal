@@ -123,6 +123,44 @@ export default function PotholeMap({
     }
   };
 
+  const handleSetRepairing = async (pothole: Pothole) => {
+    setActionLoading(pothole.id);
+    try {
+      await apiRequest(`/api/potholes/${pothole.id}/repairing`, {
+        method: 'PATCH',
+      });
+      queryClient.invalidateQueries({ queryKey: ['potholes'] });
+      toast({ title: 'Estado atualizado', description: 'O buraco foi marcado como "Em reparação".' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao marcar buraco como em reparação.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResolve = async (pothole: Pothole) => {
+    setActionLoading(pothole.id);
+    try {
+      const updatedPothole = await apiRequest<Pothole>(`/api/potholes/${pothole.id}/resolve`, {
+        method: 'PATCH',
+      });
+      queryClient.setQueryData<Pothole[]>(['potholes'], (prev = []) =>
+        prev.map((item) => (item.id === pothole.id ? { ...item, ...updatedPothole } : item)),
+      );
+      setSelectedPothole((current) =>
+        current && current.id === pothole.id ? { ...current, ...updatedPothole } : current,
+      );
+      queryClient.invalidateQueries({ queryKey: ['potholes'] });
+      toast({ title: 'Buraco marcado como reparado', description: 'Obrigado por confirmar a resolução.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao marcar buraco como reparado.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDelete = async (pothole: Pothole) => {
     setActionLoading(pothole.id);
     try {
@@ -181,6 +219,8 @@ export default function PotholeMap({
         pothole={selectedPothole}
         open={!!selectedPothole}
         onClose={() => setSelectedPothole(null)}
+        onSetRepairing={handleSetRepairing}
+        onResolve={handleResolve}
         onReopen={handleReopen}
         onDelete={handleDelete}
         actionLoading={actionLoading}
