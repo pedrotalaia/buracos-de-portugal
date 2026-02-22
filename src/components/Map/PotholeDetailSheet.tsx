@@ -13,9 +13,11 @@ import {
   MessageCircle,
   MapPin,
   RotateCcw,
+  Wrench,
   Trash2,
   Loader2,
   Send,
+  CheckCircle,
   Clock,
   User,
 } from 'lucide-react';
@@ -30,11 +32,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { apiRequest } from '@/lib/api';
 
 const severityColors: Record<string, string> = {
   low: 'hsl(var(--severity-low))',
@@ -53,6 +53,8 @@ interface PotholeDetailSheetProps {
   pothole: Pothole | null;
   open: boolean;
   onClose: () => void;
+  onSetRepairing: (pothole: Pothole) => void;
+  onResolve: (pothole: Pothole) => void;
   onReopen: (pothole: Pothole) => void;
   onDelete: (pothole: Pothole) => void;
   actionLoading: string | null;
@@ -62,13 +64,13 @@ export default function PotholeDetailSheet({
   pothole,
   open,
   onClose,
+  onSetRepairing,
+  onResolve,
   onReopen,
   onDelete,
   actionLoading,
 }: PotholeDetailSheetProps) {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [commentText, setCommentText] = useState('');
   const [reporterName, setReporterName] = useState<string | null>(null);
 
   // Fetch reporter profile when pothole changes
@@ -79,16 +81,11 @@ export default function PotholeDetailSheet({
     }
     
     const fetchReporter = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', pothole.user_id)
-        .single();
-      
-      if (error || !data) {
+      try {
+        const profile = await apiRequest<{ id: string; display_name: string | null }>(`/api/profiles/${pothole.user_id}`);
+        setReporterName(profile.display_name || 'Usuário');
+      } catch {
         setReporterName('Usuário');
-      } else {
-        setReporterName(data.display_name || 'Usuário');
       }
     };
     
@@ -160,6 +157,38 @@ export default function PotholeDetailSheet({
 
           {/* Action buttons */}
           <div className="flex gap-2">
+            {pothole.status === 'reported' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-1"
+                onClick={() => onSetRepairing(pothole)}
+                disabled={actionLoading === pothole.id}
+              >
+                {actionLoading === pothole.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Wrench className="h-3 w-3" />
+                )}
+                Em reparação
+              </Button>
+            )}
+            {(pothole.status === 'reported' || pothole.status === 'repairing') && (
+              <Button
+                size="sm"
+                className="flex-1 gap-1"
+                onClick={() => onResolve(pothole)}
+                disabled={!user || actionLoading === pothole.id}
+                title={!user ? 'Inicie sessão para marcar como reparado' : undefined}
+              >
+                {actionLoading === pothole.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-3 w-3" />
+                )}
+                Marcar reparado
+              </Button>
+            )}
             {(pothole.status === 'repaired' || pothole.status === 'archived') && (
               <Button
                 size="sm"

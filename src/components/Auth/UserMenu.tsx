@@ -32,7 +32,7 @@ export default function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="bg-background/95 backdrop-blur shadow-lg gap-2">
           <User className="h-4 w-4" />
-          <span className="max-w-[120px] truncate text-xs">{user.email}</span>
+          <span className="max-w-[120px] truncate text-xs">{user.email ?? user.name ?? 'Utilizador'}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

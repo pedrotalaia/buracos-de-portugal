@@ -1,4 +1,4 @@
-# Portugal Road Watch
+# Buracos de Portugal
 
 Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Portugal.
 
@@ -7,54 +7,27 @@ Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Po
 - Vite
 - React + TypeScript
 - Tailwind CSS + shadcn/ui
-- Supabase (Database, Auth, Storage, Edge Functions)
+- Neon Postgres
+- Neon Auth
+- API Node/Express (camada backend)
 - React Leaflet
 
 ## Requisitos
 
 - Docker e Docker Compose
-- Supabase CLI — [instalar aqui](https://supabase.com/docs/guides/cli/getting-started)
+- NEON
 
 Ou, sem Docker:
 
 - Node.js 18+
 - npm 9+
-- Supabase CLI
 
-## Setup local (Docker — recomendado)
-
-```sh
-git clone https://github.com/wods-agency/portugal-road-watch.git
-cd portugal-road-watch
-cp .env.example .env
-
-# Inicia o Supabase local (base de dados, auth, storage)
-supabase start
-
-# Copia o API URL e anon key do output acima para o ficheiro .env
-
-# Inicia a aplicação
-docker compose up
-```
-
-App local: http://localhost:8080
-
-Para parar:
-
-```sh
-docker compose down
-supabase stop
-```
-
-## Setup local (sem Docker)
+## Setup local
 
 ```sh
 git clone https://github.com/wods-agency/portugal-road-watch.git
 cd portugal-road-watch
 cp .env.example .env
-
-supabase start
-# Copia o API URL e anon key para o .env
 
 npm install
 npm run dev
@@ -66,6 +39,8 @@ App local: http://localhost:8080
 
 ```sh
 npm run dev
+npm run dev:web
+npm run dev:api
 npm run build
 npm run preview
 npm run test
@@ -74,13 +49,37 @@ npm run lint
 
 ## Configuração de ambiente
 
-Copiar `.env.example` para `.env` e preencher com os valores do `supabase start`:
+Cria `.env` a partir de `.env.example` e preenche as variáveis:
 
 ```sh
 cp .env.example .env
 ```
 
-Ver `.env.example` para a lista completa de variáveis (obrigatórias e opcionais).
+Configuração Neon:
+
+```sh
+DATABASE_URL=<neon_postgres_url>
+NEON_DATABASE_URL=<neon_postgres_url>
+VITE_AUTH_PROVIDER=neon
+VITE_NEON_AUTH_URL=<neon_auth_url>
+RESEND_API_KEY=<resend_api_key>
+RESEND_FROM_EMAIL=Buracos de Portugal <onboarding@teu-dominio.pt>
+VITE_API_BASE_URL=<url_publica_da_tua_api_express>
+VITE_UPLOADS_BASE_URL=<url_publica_da_tua_api_express>
+```
+
+Notas:
+
+- Sem `VITE_NEON_AUTH_URL`, o login/registo Neon Auth não funciona.
+- Com `RESEND_API_KEY` + `RESEND_FROM_EMAIL`, o backend envia um email transacional após registo (`POST /api/auth/signup-email`).
+- Em produção, se frontend e backend estiverem em domínios diferentes, define `VITE_API_BASE_URL` (ex.: `https://api.buracosdeportugal.pt`) para evitar 404 em `/api/*`.
+- Se as imagens estiverem a ser servidas pelo backend (`/uploads/*`), define `VITE_UPLOADS_BASE_URL` (normalmente igual ao `VITE_API_BASE_URL`).
+
+Opcional (geocoding):
+
+```sh
+VITE_GEOCODING_PROVIDER=nominatim
+```
 
 ## Funcionalidades principais
 
@@ -90,26 +89,20 @@ Ver `.env.example` para a lista completa de variáveis (obrigatórias e opcionai
 - Estatísticas de buracos e votos
 - Preenchimento automático de morada por coordenadas quando não é indicada manualmente
 
-## Supabase
+## Backend Neon API
 
-### Migration de geocoding
+A API local corre em `http://localhost:8787` e expõe:
 
-Foi adicionada uma migration para campos de morada normalizada e estado de geocoding:
-
-- supabase/migrations/20260215210000_add_geocoding_normalized_address_fields.sql
-
-### Edge Functions
-
-- archive-old-potholes
-- backfill-pothole-addresses
-
-Invocar manualmente o backfill:
-
-```sh
-supabase functions invoke backfill-pothole-addresses --no-verify-jwt --project-ref <project-ref> --query "limit=100"
-```
-
-Recomendação: executar 1 vez por dia (fim do dia) via scheduler.
+- `GET /api/potholes`
+- `POST /api/potholes` (com upload opcional de foto)
+- `PATCH /api/potholes/:id/reopen`
+- `DELETE /api/potholes/:id`
+- `GET /api/comments?potholeId=...`
+- `POST /api/comments`
+- `GET /api/votes/status`
+- `POST /api/votes/toggle`
+- `GET /api/profiles/:id`
+- `PUT /api/profiles/:id`
 
 ## Deploy
 
@@ -120,3 +113,19 @@ npm run build
 ```
 
 Publicar os ficheiros de dist no teu provider de hosting (Vercel, Netlify, Cloudflare Pages, etc.).
+
+### Vercel sem subdomínio API
+
+Se não tens `api.<dominio>`, podes servir a API no mesmo domínio da app usando Vercel Functions:
+
+- As rotas backend estão expostas via [api/[...all].js](api/[...all].js) e respondem em `/api/*`.
+- Não é necessário `VITE_API_BASE_URL` para este cenário (usa o mesmo domínio).
+- Define as variáveis de ambiente no projeto Vercel (Production/Preview):
+	- `DATABASE_URL`
+	- `NEON_DATABASE_URL`
+	- `VITE_AUTH_PROVIDER`
+	- `VITE_NEON_AUTH_URL`
+	- `RESEND_API_KEY`
+	- `RESEND_FROM_EMAIL`
+
+Nota: uploads em disco em runtime serverless são temporários; para produção recomenda-se storage persistente (S3, Supabase Storage, etc.).

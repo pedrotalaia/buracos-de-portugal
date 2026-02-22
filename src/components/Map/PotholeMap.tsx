@@ -9,10 +9,10 @@ import { Pothole, SEVERITY_LABELS, STATUS_LABELS } from '@/types/pothole';
 import { ThumbsUp, MessageCircle, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import PotholeDetailSheet from './PotholeDetailSheet';
+import { apiRequest } from '@/lib/api';
 
 // Fix default marker icon issue with webpack/vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -108,19 +108,54 @@ export default function PotholeMap({
   const handleReopen = async (pothole: Pothole) => {
     setActionLoading(pothole.id);
     try {
-      const { error } = await supabase
-        .from('potholes')
-        .update({
-          status: 'reported' as any,
-          repaired_at: null,
-          reopen_count: (pothole.reopen_count ?? 0) + 1,
-        })
-        .eq('id', pothole.id);
-      if (error) throw error;
+      await apiRequest(`/api/potholes/${pothole.id}/reopen`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reopen_count: (pothole.reopen_count ?? 0) + 1 }),
+      });
       queryClient.invalidateQueries({ queryKey: ['potholes'] });
       toast({ title: 'Buraco reaberto', description: 'O estado foi alterado para "Reportado".' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao reabrir buraco.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSetRepairing = async (pothole: Pothole) => {
+    setActionLoading(pothole.id);
+    try {
+      await apiRequest(`/api/potholes/${pothole.id}/repairing`, {
+        method: 'PATCH',
+      });
+      queryClient.invalidateQueries({ queryKey: ['potholes'] });
+      toast({ title: 'Estado atualizado', description: 'O buraco foi marcado como "Em reparação".' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao marcar buraco como em reparação.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResolve = async (pothole: Pothole) => {
+    setActionLoading(pothole.id);
+    try {
+      const updatedPothole = await apiRequest<Pothole>(`/api/potholes/${pothole.id}/resolve`, {
+        method: 'PATCH',
+      });
+      queryClient.setQueryData<Pothole[]>(['potholes'], (prev = []) =>
+        prev.map((item) => (item.id === pothole.id ? { ...item, ...updatedPothole } : item)),
+      );
+      setSelectedPothole((current) =>
+        current && current.id === pothole.id ? { ...current, ...updatedPothole } : current,
+      );
+      queryClient.invalidateQueries({ queryKey: ['potholes'] });
+      toast({ title: 'Buraco marcado como reparado', description: 'Obrigado por confirmar a resolução.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao marcar buraco como reparado.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -129,15 +164,15 @@ export default function PotholeMap({
   const handleDelete = async (pothole: Pothole) => {
     setActionLoading(pothole.id);
     try {
-      await supabase.from('votes').delete().eq('pothole_id', pothole.id);
-      await supabase.from('comments').delete().eq('pothole_id', pothole.id);
-      const { error } = await supabase.from('potholes').delete().eq('id', pothole.id);
-      if (error) throw error;
+      await apiRequest(`/api/potholes/${pothole.id}`, {
+        method: 'DELETE',
+      });
       queryClient.invalidateQueries({ queryKey: ['potholes'] });
       setSelectedPothole(null);
       toast({ title: 'Buraco eliminado', description: 'O reporte foi removido.' });
-    } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao eliminar buraco.';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -184,6 +219,8 @@ export default function PotholeMap({
         pothole={selectedPothole}
         open={!!selectedPothole}
         onClose={() => setSelectedPothole(null)}
+        onSetRepairing={handleSetRepairing}
+        onResolve={handleResolve}
         onReopen={handleReopen}
         onDelete={handleDelete}
         actionLoading={actionLoading}
