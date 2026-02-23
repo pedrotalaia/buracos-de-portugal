@@ -14,14 +14,21 @@ Aplicação web para reportar, visualizar e acompanhar buracos em estradas de Po
 
 ## Requisitos
 
+- Docker e Docker Compose
+- NEON
+
+Ou, sem Docker:
+
 - Node.js 18+
 - npm 9+
 
 ## Setup local
 
 ```sh
-git clone <URL_DO_REPOSITORIO>
+git clone https://github.com/wods-agency/portugal-road-watch.git
 cd portugal-road-watch
+cp .env.example .env
+
 npm install
 npm run dev
 ```
